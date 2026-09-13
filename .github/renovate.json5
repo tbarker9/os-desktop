@@ -6,12 +6,15 @@
 
   "rebaseWhen": "never",
 
+  // Nothing merges itself. Every update waits for review -- including the
+  // one-off PRs that pin GitHub Actions to commit SHAs. Set at the top level so
+  // it overrides anything inherited from config:best-practices.
+  "automerge": false,
+
   "packageRules": [
     {
-      "automerge": true,
-      "matchUpdateTypes": ["pin", "pinDigest"]
-    },
-    {
+      // Don't pin container images referenced inside workflow files; only the
+      // base image in the Containerfile is pinned.
       "enabled": false,
       "matchUpdateTypes": ["digest", "pinDigest", "pin"],
       "matchDepTypes": ["container"],

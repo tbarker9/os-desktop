@@ -2,29 +2,29 @@
 
 set -ouex pipefail
 
-# No system_files/ tree in this repo yet. If you need to ship files onto / --
-# a policy.json to enforce image signatures, a systemd unit -- recreate the
-# directory, re-add `COPY system_files /system_files` to the Containerfile, and
-# restore the copy below.
-#
-# cp -avf "/ctx/system_files"/. /
-
 ### Packages
 #
-# These are currently layered imperatively with `rpm-ostree install`, which means
-# they are re-applied on every OS update (slow) and are lost on reinstall.
-# Uncomment to bake them into the image instead.
+# These were previously layered with `rpm-ostree install`. A bootc image does not
+# carry layered packages across a switch, so anything relied on has to be baked
+# in here -- including zsh, which is the login shell in /etc/passwd. Without it
+# the user's session cannot start and the greeter loops forever.
 #
-# Deliberately left off for the first build so that a failure points at one
-# change (/nix) rather than several.
-#
-# dnf5 install -y \
-#     adb \
-#     fd-find \
-#     ghostty \
-#     gnome-boxes \
-#     lazygit \
-#     m4 \
-#     neovim \
-#     ripgrep \
-#     zsh
+# Names taken verbatim from the deployment origin's `requested=` list, so they
+# are known to resolve.
+
+dnf5 install -y \
+    adb \
+    fd-find \
+    ghostty \
+    git \
+    gnome-boxes \
+    lazygit \
+    m4 \
+    neovim \
+    ripgrep \
+    zsh
+
+# Not handled here: 1Password. It was installed from a downloaded RPM
+# (`requested-local` in the deployment origin, pinned at 8.12.12) rather than a
+# repo, so it needs 1Password's yum repo added before it can be installed. See
+# https://support.1password.com/install-linux/#red-hat-fedora

@@ -1,6 +1,0 @@
-# Xbox controller pairing fix. This was previously set by hand on the machine
-# and recorded nowhere; declaring it here means it survives reinstalls.
-#
-# Note: removing a karg locally that came from the image is undefined behaviour.
-# Change it here and rebuild, not on the running system.
-kargs = ["bluetooth.disable_ertm=1"]

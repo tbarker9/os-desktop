@@ -63,17 +63,23 @@ Home directory config lives separately, in `nix-config`.
 ## Keeping the build alive
 
 GitHub disables scheduled workflows after **60 days without repository
-activity**. Workflow runs do not count — only commits. Meanwhile `uupd` warns
-after **30 days** without an update, so there is a month of slack.
+activity**. Workflow runs do not count -- only commits.
 
-When that notification appears:
+This is handled by Renovate (`.github/renovate.json5`). It watches the pinned
+base digest and opens a PR each time Bazzite ships stable, roughly every 5 days.
+Merging those PRs is the repository activity that keeps the schedule alive, and
+it means OS changes land when I choose rather than silently.
+
+Note the config automerges `pin`/`pinDigest` updates (the act of *adding* a pin)
+but not `digest` updates (moving an existing pin), so base image bumps wait for
+review.
+
+Fallback if it ever does go dormant -- `uupd` warns after 30 days without an
+update, which is 30 days of slack before the 60-day cutoff:
 
 ```
-git commit --allow-empty -m "keepalive" && git push   # resets the 60-day clock
-gh workflow run build.yml                              # push alone may not trigger:
-gh run watch                                           #   the push trigger is path-filtered
+git commit --allow-empty -m "keepalive" && git push
+gh workflow run build.yml     # push alone may not trigger; the push trigger is path-filtered
+gh run watch
 sudo bootc upgrade --apply
 ```
-
-Normal commits to this repo reset the clock too, so this only matters once the
-image has stopped changing.

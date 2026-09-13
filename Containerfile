@@ -4,9 +4,13 @@ COPY build_files /
 COPY system_files /system_files
 
 # Base Image
-# Tracking the :stable tag (no digest pin) so the scheduled rebuild actually
-# picks up new Bazzite builds. Bazzite ships stable roughly every 5 days.
-FROM ghcr.io/ublue-os/bazzite:stable
+# Digest-pinned, managed by Renovate (see .github/renovate.json5), which bumps
+# and automerges it as Bazzite ships stable -- roughly every 5 days.
+#
+# Those automerged PRs double as repository activity, which is what stops GitHub
+# disabling the scheduled build after 60 days of inactivity. Do not hand-edit;
+# let Renovate move it.
+FROM ghcr.io/ublue-os/bazzite:stable@sha256:437920bae6935fd70719c1e0109f3469b1215a788330b0de924d0c7ac8aaa84c
 ## Other possible base images include:
 # FROM ghcr.io/ublue-os/bazzite:testing
 # FROM ghcr.io/ublue-os/aurora:stable

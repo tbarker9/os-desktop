@@ -1,7 +1,6 @@
 # Allow build scripts to be referenced without being copied into the final image
 FROM scratch AS ctx
 COPY build_files /
-COPY system_files /system_files
 
 # Base Image
 # Digest-pinned, managed by Renovate (see .github/renovate.json5), which bumps

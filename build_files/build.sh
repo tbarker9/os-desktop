@@ -2,8 +2,12 @@
 
 set -ouex pipefail
 
-# Copy the contents of system_files/ of the git repo to /
-cp -avf "/ctx/system_files"/. /
+# No system_files/ tree in this repo yet. If you need to ship files onto / --
+# a policy.json to enforce image signatures, a systemd unit -- recreate the
+# directory, re-add `COPY system_files /system_files` to the Containerfile, and
+# restore the copy below.
+#
+# cp -avf "/ctx/system_files"/. /
 
 ### Packages
 #

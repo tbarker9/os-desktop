@@ -10,15 +10,23 @@ Published to `ghcr.io/tbarker9/os-desktop`.
 | Change | Where | Why |
 |---|---|---|
 | empty `/nix` directory | `Containerfile` | Bazzite's root is read-only (composefs), so Nix's installer cannot create the mountpoint at runtime. Shipping it in the image is the fix. |
-| `bluetooth.disable_ertm=1` | `system_files/usr/lib/bootc/kargs.d/` | Xbox controller pairing. Was set by hand on the machine and recorded nowhere. |
+
+That is the entire diff against stock Bazzite. Everything else here is plumbing:
+the build workflow, Renovate, and the signing key.
+
+Do not add kernel arguments that Bazzite already manages --
+`/usr/libexec/bazzite-hardware-setup` runs on every boot and applies its own
+(`bluetooth.disable_ertm=1`, and others gated on hardware ID). An image-supplied
+karg cannot be cleanly removed on the machine, so duplicating one pins it past
+any future upstream decision to drop it.
 
 ## Layout
 
 ```
 Containerfile                             base image + /nix
 build_files/build.sh                      packages (dnf5) — runs inside the build
-system_files/                             copied verbatim onto / in the image
-  usr/lib/bootc/kargs.d/10-bluetooth.toml kernel arguments
+                                          (no system_files/ tree yet -- see
+                                          build.sh for how to restore it)
 image-template.env                        image name, description, tags
 ```
 

@@ -91,3 +91,26 @@ gh workflow run build.yml     # push alone may not trigger; the push trigger is 
 gh run watch
 sudo bootc upgrade --apply
 ```
+
+
+## Deliberately not in the image
+
+**1Password and Brave** are layered on the running system, not baked in. Both
+unpack into `/opt`, which is a symlink to `/var/opt` on this base -- and `/var`
+is machine state that bootc seeds only on first boot, so an RPM installed there
+during the build is discarded on deploy.
+
+The fix used elsewhere is to replace `/opt` with a real directory. ostree
+symlinks a whole family of writable FHS paths into `/var` (`/home`, `/opt`,
+`/srv`, `/root`, `/usr/local`, `/mnt`) so their contents survive upgrades;
+undoing one of them to accommodate two applications changes how the OS works
+more than the problem warrants.
+
+What the image *does* provide is their repo definitions and signing keys, so
+installing them needs no setup. The commands live in `nix-config` as the
+`os-layers` helper, since they are user-run scripts rather than OS content.
+
+Also absent, and why: **docker** (the binary here was a brew client with no
+daemon; podman covers it), **keybase** (no longer used), **calibre** (runs as a
+flatpak). Flatpaks are not managed declaratively -- the list lives in
+`nix-config`.

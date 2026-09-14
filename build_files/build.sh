@@ -86,7 +86,39 @@ systemctl enable nix.mount
 systemctl disable nix-daemon.socket
 systemctl enable nix-daemon.service
 
-# Not handled here: 1Password. It came from a downloaded RPM (`requested-local`
-# in the deployment origin, pinned at 8.12.12) rather than a repo, so it needs
-# 1Password's yum repo wired up separately.
-# https://support.1password.com/install-linux/#red-hat-fedora
+### 1Password
+#
+# /opt is a symlink to /var/opt on this base. /var is machine state that bootc
+# seeds on first boot only, so an RPM unpacking into /opt would be discarded on
+# deploy -- which is why 1Password was never in the image and had to be layered
+# from a downloaded RPM. Convert /opt to a real directory first.
+#
+# Verified safe on this machine: everything under /var/opt is already dead.
+# calibre was replaced by the flatpak (com.calibre_ebook.calibre), containerd is
+# an empty directory, and the 1Password and keybase entries are symlinks into
+# /usr/lib/opt that already dangle now that layered packages are gone.
+#
+# https://github.com/InvisCo/laptop-os documents the same fix: "do not restore
+# the symlink."
+if [ -L /opt ]; then
+    rm /opt
+    mkdir /opt
+fi
+
+rpm --import https://downloads.1password.com/linux/keys/1password.asc
+
+cat >/etc/yum.repos.d/1password.repo <<'REPO'
+[1password]
+name=1Password Stable Channel
+baseurl=https://downloads.1password.com/linux/rpm/stable/$basearch
+enabled=1
+gpgcheck=1
+repo_gpgcheck=1
+gpgkey=https://downloads.1password.com/linux/keys/1password.asc
+REPO
+
+dnf5 install -y 1password
+
+# Drop the repo definition so it does not ship enabled; updates come with the
+# image, not from dnf. The imported GPG key is left in place.
+rm -f /etc/yum.repos.d/1password.repo

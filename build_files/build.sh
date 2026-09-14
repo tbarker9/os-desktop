@@ -86,28 +86,29 @@ systemctl enable nix.mount
 systemctl disable nix-daemon.socket
 systemctl enable nix-daemon.service
 
-### 1Password -- deliberately NOT installed here
+### Software left to layering
 #
-# 1Password unpacks into /opt. On this base /opt is a symlink to /var/opt, which
-# is machine state that bootc seeds only on first boot, so an RPM installed into
-# it during the build would be discarded on deploy.
+# 1Password and Brave both unpack into /opt. On this base /opt is a symlink to
+# /var/opt, which is machine state that bootc seeds only on first boot, so an RPM
+# installed there during the build is discarded on deploy.
 #
-# The fix used elsewhere is to replace /opt with a real directory. That is not
-# a Bazzite quirk -- ostree symlinks a whole family of writable FHS directories
-# into /var (/home, /opt, /srv, /root, /usr/local, /mnt) so their contents
-# survive upgrades. Undoing one of them to accommodate a single application is a
+# The fix used elsewhere is to replace /opt with a real directory. That is not a
+# Bazzite quirk -- ostree symlinks a whole family of writable FHS paths into /var
+# (/home, /opt, /srv, /root, /usr/local, /mnt) so their contents survive
+# upgrades. Undoing one of them to accommodate a couple of applications is a
 # larger change to how the OS works than the problem warrants.
 #
-# So 1Password is layered on the running system instead:
+# So both are layered on the running system instead:
 #
 #     rpm-ostree install 1password
+#     rpm-ostree install brave-browser
 #
-# rpm-ostree relocates /opt content to /usr/lib/opt and symlinks it back from
+# rpm-ostree relocates /opt content into /usr/lib/opt and symlinks it back from
 # /var/opt, which is how this worked before the image existed.
 #
-# The repo definition ships in system_files/etc/yum.repos.d/1password.repo and
-# the signing key is imported below, so the command above needs no setup.
-#
-# See layers.txt for the full list of things deliberately left to layering.
+# Nothing structural is changed here: the repo definitions ship in
+# system_files/etc/yum.repos.d/ and the signing keys are imported below, so both
+# commands need no setup. See layers.txt.
 
 rpm --import https://downloads.1password.com/linux/keys/1password.asc
+rpm --import https://brave-browser-rpm-release.s3.brave.com/brave-core.asc

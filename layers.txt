@@ -28,6 +28,17 @@ Flatpak is not an option here -- sandboxed installs lose browser unlocking,
 which is the main reason for using it.
 
 
+## Brave  -- layer it
+
+    rpm-ostree install brave-browser
+
+Same reason as 1Password: installs into /opt/brave.com. The flatpak build is
+usable but unpleasant enough to be worth the native package.
+
+Repo definition ships in system_files/etc/yum.repos.d/brave-browser.repo and the
+signing key is imported during the build.
+
+
 ## Docker  -- dropped
 
 Removed from the Nix config on 2026-09-14. The docker binary here was a brew

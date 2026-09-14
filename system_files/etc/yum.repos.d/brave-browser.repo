@@ -1,0 +1,8 @@
+# Shipped so `rpm-ostree install brave-browser` works with no setup. The package
+# is deliberately not baked into the image -- see layers.txt.
+[brave-browser]
+name=Brave Browser
+enabled=1
+gpgcheck=1
+gpgkey=https://brave-browser-rpm-release.s3.brave.com/brave-core.asc
+baseurl=https://brave-browser-rpm-release.s3.brave.com/$basearch

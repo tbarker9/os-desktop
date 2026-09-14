@@ -1,6 +1,7 @@
 # Allow build scripts to be referenced without being copied into the final image
 FROM scratch AS ctx
 COPY build_files /
+COPY system_files /system_files
 
 # Base Image
 # Digest-pinned, managed by Renovate (see .github/renovate.json5), which bumps
@@ -31,15 +32,12 @@ FROM ghcr.io/ublue-os/bazzite:stable@sha256:437920bae6935fd70719c1e0109f3469b121
 
 # RUN rm /opt && mkdir /opt
 
-### /nix MOUNTPOINT
-## Bazzite's root is read-only (composefs), so /nix cannot be created at runtime --
-## this is why the Determinate installer's ostree planner fails here. Shipping an
-## empty /nix in the image gives the bind mount somewhere to land.
-##
-## This has to be a RUN line: git does not track empty directories, so it cannot
-## be delivered via system_files/.
-
-RUN install -d -m 0755 /nix
+### /nix
+## Bazzite's root is read-only (composefs), so /nix cannot be created at runtime.
+## It is no longer made by hand here -- Fedora's nix-filesystem package owns
+## /nix and /nix/var, and is installed by build.sh. That gives a directory with
+## correct RPM ownership and SELinux context rather than a hand-made one, which
+## matters because this system runs SELinux in enforcing mode.
 
 ### MODIFICATIONS
 ## make modifications desired in your image and install packages by modifying the build.sh script

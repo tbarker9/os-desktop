@@ -86,39 +86,28 @@ systemctl enable nix.mount
 systemctl disable nix-daemon.socket
 systemctl enable nix-daemon.service
 
-### 1Password
+### 1Password -- deliberately NOT installed here
 #
-# /opt is a symlink to /var/opt on this base. /var is machine state that bootc
-# seeds on first boot only, so an RPM unpacking into /opt would be discarded on
-# deploy -- which is why 1Password was never in the image and had to be layered
-# from a downloaded RPM. Convert /opt to a real directory first.
+# 1Password unpacks into /opt. On this base /opt is a symlink to /var/opt, which
+# is machine state that bootc seeds only on first boot, so an RPM installed into
+# it during the build would be discarded on deploy.
 #
-# Verified safe on this machine: everything under /var/opt is already dead.
-# calibre was replaced by the flatpak (com.calibre_ebook.calibre), containerd is
-# an empty directory, and the 1Password and keybase entries are symlinks into
-# /usr/lib/opt that already dangle now that layered packages are gone.
+# The fix used elsewhere is to replace /opt with a real directory. That is not
+# a Bazzite quirk -- ostree symlinks a whole family of writable FHS directories
+# into /var (/home, /opt, /srv, /root, /usr/local, /mnt) so their contents
+# survive upgrades. Undoing one of them to accommodate a single application is a
+# larger change to how the OS works than the problem warrants.
 #
-# https://github.com/InvisCo/laptop-os documents the same fix: "do not restore
-# the symlink."
-if [ -L /opt ]; then
-    rm /opt
-    mkdir /opt
-fi
+# So 1Password is layered on the running system instead:
+#
+#     rpm-ostree install 1password
+#
+# rpm-ostree relocates /opt content to /usr/lib/opt and symlinks it back from
+# /var/opt, which is how this worked before the image existed.
+#
+# The repo definition ships in system_files/etc/yum.repos.d/1password.repo and
+# the signing key is imported below, so the command above needs no setup.
+#
+# See layers.txt for the full list of things deliberately left to layering.
 
 rpm --import https://downloads.1password.com/linux/keys/1password.asc
-
-cat >/etc/yum.repos.d/1password.repo <<'REPO'
-[1password]
-name=1Password Stable Channel
-baseurl=https://downloads.1password.com/linux/rpm/stable/$basearch
-enabled=1
-gpgcheck=1
-repo_gpgcheck=1
-gpgkey=https://downloads.1password.com/linux/keys/1password.asc
-REPO
-
-dnf5 install -y 1password
-
-# Drop the repo definition so it does not ship enabled; updates come with the
-# image, not from dnf. The imported GPG key is left in place.
-rm -f /etc/yum.repos.d/1password.repo

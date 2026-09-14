@@ -1,0 +1,61 @@
+# Deliberately not in the image
+
+Things left to layer on the running system, or dropped entirely, and why.
+The default is for software to come from the image -- these are the exceptions.
+
+
+## 1Password  -- layer it
+
+    rpm-ostree install 1password
+
+Installs into /opt, which is a symlink to /var/opt on this base. /var is machine
+state that bootc seeds only on first boot, so an RPM unpacked there during the
+image build is discarded on deploy.
+
+Baking it in would mean replacing /opt with a real directory. ostree symlinks a
+whole family of writable FHS paths into /var (/home, /opt, /srv, /root,
+/usr/local, /mnt) so their contents survive upgrades; undoing one of them for a
+single application changes how the OS fundamentally works, which is a worse
+trade than accepting the costs of layering.
+
+Costs accepted: OS updates re-apply the layer so they take longer, and it is
+lost on a reinstall. Both are fine.
+
+The repo definition ships in system_files/etc/yum.repos.d/ and its signing key
+is imported during the build, so the command above needs no setup.
+
+Flatpak is not an option here -- sandboxed installs lose browser unlocking,
+which is the main reason for using it.
+
+
+## Docker  -- dropped
+
+Removed from the Nix config on 2026-09-14. The docker binary here was a brew
+client with no local daemon; /var/opt/containerd was an empty leftover with no
+binary and no systemd unit. Podman covers the same ground and ships with the
+base.
+
+
+## Keybase  -- dropped
+
+Removed on 2026-09-14, including 351M of cached data under ~/.cache and
+~/.local/share. No longer used. The autostart entry was failing on every login
+because the binary went away with the layered packages.
+
+
+## calibre  -- flatpak, not the image
+
+Runs as com.calibre_ebook.calibre from flathub. The 601M under /var/opt/calibre
+is a dead manual install; safe to delete.
+
+
+## Flatpaks  -- not managed declaratively
+
+75 system-scope flatpaks, installed via Bazzite's own bazzite-flatpak-manager.
+nix-flatpak's home-manager module only manages user-scope installs, so adopting
+it would mean migrating all of them for no real gain -- flatpaks do not exist on
+macOS, so they contribute nothing to cross-machine consistency.
+
+The list is captured in flatpaks.txt instead. Restore with:
+
+    xargs flatpak install -y flathub < flatpaks.txt

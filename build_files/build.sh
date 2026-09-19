@@ -18,9 +18,15 @@ dnf5 install -y \
     git \
     gnome-boxes \
     m4 \
-    neovim \
     ripgrep \
     zsh
+
+# neovim is deliberately absent: home-manager installs it (see nix-config,
+# home/common.nix), and ~/.config/nvim is a symlink into that repo. Shipping it
+# here too put two neovims on the box -- the nix one always won on PATH, so the
+# image's copy was dead weight that would only drift out of sync. Letting nix
+# own the editor is also what makes it identical on the Mac and the homeserver,
+# which the image cannot reach.
 
 ### COPR packages
 #

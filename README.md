@@ -9,10 +9,13 @@ Published to `ghcr.io/tbarker9/os-desktop`.
 
 | Change | Where | Why |
 |---|---|---|
-| empty `/nix` directory | `Containerfile` | Bazzite's root is read-only (composefs), so Nix's installer cannot create the mountpoint at runtime. Shipping it in the image is the fix. |
+| Nix, working out of the box | `build_files/build.sh`, `system_files/` | Fedora 44 packages Nix natively. `/nix` comes from `nix-filesystem` and is made writable by a bind mount from `/var/lib/nix`. See [Nix](#nix) below -- it is the bulk of the diff. |
+| Packages that were previously layered | `build_files/build.sh` | `adb`, `fd-find`, `git`, `gnome-boxes`, `m4`, `ripgrep`, `zsh`. A bootc image does not carry layered packages across a switch, so anything relied on has to be baked in. `zsh` especially: `/etc/passwd` names it as the login shell, and without it the greeter loops forever. |
+| `ghostty`, `lazygit` | `build_files/build.sh` | Not in the default Fedora repos. Their COPRs are enabled, used, then disabled, so the image does not ship enabled COPRs. |
+| 1Password + Brave repo definitions | `system_files/etc/yum.repos.d/` | The applications themselves are *not* installed -- see [Deliberately not in the image](#deliberately-not-in-the-image). Shipping the repo files and importing the signing keys means layering them later needs no setup. |
 
-That is the entire diff against stock Bazzite. Everything else here is plumbing:
-the build workflow, Renovate, and the signing key.
+Everything else here is plumbing: the build workflow, Renovate, and the signing
+key.
 
 Do not add kernel arguments that Bazzite already manages --
 `/usr/libexec/bazzite-hardware-setup` runs on every boot and applies its own
@@ -23,12 +26,49 @@ any future upstream decision to drop it.
 ## Layout
 
 ```
-Containerfile                             base image + /nix
-build_files/build.sh                      packages (dnf5) — runs inside the build
-                                          (no system_files/ tree yet -- see
-                                          build.sh for how to restore it)
+Containerfile                             base image, pinned by digest
+build_files/build.sh                      packages (dnf5) + nix setup --
+                                          runs inside the build
+system_files/                             copied verbatim to / at build time
+  etc/yum.repos.d/                        1Password + Brave repo definitions
+  usr/lib/systemd/system/nix.mount        bind-mounts /var/lib/nix over /nix
+  usr/lib/tmpfiles.d/nix-store.conf       creates the backing store dirs
 image-template.env                        image name, description, tags
 ```
+
+## Nix
+
+Bazzite's root is read-only (composefs), so a writable `/nix` needs two pieces
+that ship in `system_files/`:
+
+- `tmpfiles.d/nix-store.conf` creates the real store under `/var/lib/nix`
+  (persistent, per-machine).
+- `nix.mount` bind-mounts that over `/nix` at boot.
+
+Nix itself is installed from Fedora's RPMs, so the binaries live in `/usr` and
+are versioned with the image. **There is no `curl | sh` installer step** -- the
+Determinate Systems installer was used once, early on, and is no longer how this
+works. `/etc/nix/nix.conf` is owned by the RPM; the build appends
+`trusted-users = root @wheel` to it.
+
+Four packages are named explicitly (`nix nix-daemon nix-legacy busybox`) because
+this base sets `install_weak_deps=False`, which silently drops everything the
+`nix` metapackage merely Recommends. `build.sh` documents what each one is for
+and what breaks without it -- read that before trimming the list.
+
+The daemon runs as a plain service, not socket-activated, because SELinux denies
+PID 1 creating the socket. Again, see `build.sh`.
+
+Verifying it works after a switch:
+
+```
+findmnt /nix                       # should be rw, source /var/lib/nix
+systemctl is-active nix.mount nix-daemon.service
+nix --version
+```
+
+Home directory config (packages, dotfiles, home-manager) is **not** here. It
+lives in a separate private repo, `~/Projects/nix-config`.
 
 ## Switching this machine to it
 
@@ -39,7 +79,7 @@ sudo bootc switch ghcr.io/tbarker9/os-desktop:latest
 systemctl reboot
 ```
 
-Afterwards updates arrive automatically — `uupd.timer` runs daily at 04:00.
+Afterwards updates arrive automatically -- `uupd.timer` runs daily at 04:00.
 To pull one now:
 
 ```
@@ -49,24 +89,6 @@ sudo bootc upgrade --apply     # fetch, stage, reboot if changed
 
 Rollback if a build is bad: pick the previous deployment at the boot menu, or
 `sudo bootc rollback`.
-
-## Installing Nix (after switching)
-
-Only needed once. `/nix` exists but is read-only (it lives on `/`), so the
-installer still bind-mounts real storage from `/var` onto it:
-
-```
-curl --proto '=https' --tlsv1.2 -sSf -L https://install.determinate.systems/nix \
-  | sh -s -- install ostree --persistence=/var/lib/nix
-```
-
-`nix-directory.service` will skip (its `ConditionPathExists=!/nix` is false now)
-and `nix.mount` does the real work.
-
-Determinate Nix owns `/etc/nix/nix.conf` — put custom settings in
-`/etc/nix/nix.custom.conf` instead.
-
-Home directory config lives separately, in `nix-config`.
 
 ## Keeping the build alive
 
@@ -92,7 +114,6 @@ gh run watch
 sudo bootc upgrade --apply
 ```
 
-
 ## Deliberately not in the image
 
 **1Password and Brave** are layered on the running system, not baked in. Both
@@ -110,7 +131,14 @@ What the image *does* provide is their repo definitions and signing keys, so
 installing them needs no setup. The commands live in `nix-config` as the
 `os-layers` helper, since they are user-run scripts rather than OS content.
 
+**neovim** is installed by home-manager instead, and `~/.config/nvim` is a
+symlink into `nix-config`. Shipping it here too put two neovims on the box --
+the Nix one always won on `PATH`, so the image's copy was dead weight that would
+only drift. Letting Nix own the editor also makes it identical on the Mac and
+the homeserver, which the image cannot reach. `vim-minimal` and `nano` remain,
+so there is still an editor if Nix is ever broken.
+
 Also absent, and why: **docker** (the binary here was a brew client with no
 daemon; podman covers it), **keybase** (no longer used), **calibre** (runs as a
 flatpak). Flatpaks are not managed declaratively -- the list lives in
-`nix-config`.
+`nix-config` as the `os-flatpaks` helper.

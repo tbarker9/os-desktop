@@ -96,13 +96,15 @@ GitHub disables scheduled workflows after **60 days without repository
 activity**. Workflow runs do not count -- only commits.
 
 This is handled by Renovate (`.github/renovate.json5`). It watches the pinned
-base digest and opens a PR each time Bazzite ships stable, roughly every 5 days.
-Merging those PRs is the repository activity that keeps the schedule alive, and
-it means OS changes land when I choose rather than silently.
+base digest and keeps a PR open that tracks the newest Bazzite stable (which
+ships roughly every 5 days). Merging that PR is the repository activity that
+keeps the schedule alive, and it means OS changes land when I choose rather than
+silently.
 
-Note the config automerges `pin`/`pinDigest` updates (the act of *adding* a pin)
-but not `digest` updates (moving an existing pin), so base image bumps wait for
-review.
+Nothing automerges. The flip side is that **the base only moves when I merge**:
+the daily build rebuilds on whatever digest is pinned, so an ignored Renovate PR
+means running an increasingly old Bazzite even though updates keep arriving.
+Check `rpm-ostree status` against the newest `bazzite:stable` now and then.
 
 Fallback if it ever does go dormant -- `uupd` warns after 30 days without an
 update, which is 30 days of slack before the 60-day cutoff:

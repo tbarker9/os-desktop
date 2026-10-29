@@ -4,10 +4,12 @@ COPY build_files /
 COPY system_files /system_files
 
 # Base Image
-# Digest-pinned, managed by Renovate (see .github/renovate.json5), which bumps
-# and automerges it as Bazzite ships stable -- roughly every 5 days.
+# Digest-pinned, managed by Renovate (see .github/renovate.json5). It keeps one
+# PR open that tracks the newest bazzite:stable digest -- Bazzite ships stable
+# roughly every 5 days. Nothing automerges: the base only moves when that PR is
+# merged by hand, so an unmerged PR means a stale OS.
 #
-# Those automerged PRs double as repository activity, which is what stops GitHub
+# Those merges double as repository activity, which is what stops GitHub
 # disabling the scheduled build after 60 days of inactivity. Do not hand-edit;
 # let Renovate move it.
 FROM ghcr.io/ublue-os/bazzite:stable@sha256:437920bae6935fd70719c1e0109f3469b1215a788330b0de924d0c7ac8aaa84c

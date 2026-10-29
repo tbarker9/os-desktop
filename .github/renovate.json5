@@ -4,7 +4,10 @@
     "config:best-practices",
   ],
 
-  "rebaseWhen": "never",
+  // rebaseWhen is deliberately left at its default. It was once "never", which
+  // also stops Renovate refreshing an open PR when a newer version ships: the
+  // Bazzite bump opened on 2026-09-19 stayed frozen on that day's digest for
+  // weeks, so merging it would still have left the base well behind.
 
   // Nothing merges itself. Every update waits for review -- including the
   // one-off PRs that pin GitHub Actions to commit SHAs. Set at the top level so

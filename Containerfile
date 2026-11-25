@@ -12,7 +12,7 @@ COPY system_files /system_files
 # Those merges double as repository activity, which is what stops GitHub
 # disabling the scheduled build after 60 days of inactivity. Do not hand-edit;
 # let Renovate move it.
-FROM ghcr.io/ublue-os/bazzite:stable@sha256:492f83c738838861464685aed341783c2ea2266c82a9f19f0c867fd301783fd4
+FROM ghcr.io/ublue-os/bazzite:stable@sha256:b0c3d9928a0214c65283747ab9d92f8165ba71a80a8920a6398e9b0d77e6cf1d
 ## Other possible base images include:
 # FROM ghcr.io/ublue-os/bazzite:testing
 # FROM ghcr.io/ublue-os/aurora:stable
